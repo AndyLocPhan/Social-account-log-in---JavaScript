@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SW Construction Assignment 2 - Social account Sign in</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    #google-login-button {
+      margin-top: 10px;
+      margin-left: 45%;
+    }
+    #google-logout-button {
+      margin-top: 10px;
+      margin-left: 45%;
+      background-color: #db4437;
+      display: none; /* Initially hide google logout button */
+    }
+
+    #facebook-login-button {
+      padding: 15px 45px;
+      background-color: #5793bb;
+      color: rgb(255, 252, 252);
+      margin-top: 10px;
+      margin-left:45%;
+    }
+    #facebook-logout-button {
+      padding: 15px 45px;
+      margin-top:10px;
+      margin-left:45%;
+      background-color: #db4437;
+      display: none; /* Initially hide facebook logout button */
+    }
+    #user-info {
+      margin-top: 60px;
+      margin-left: 45%;
+      display: none; /* Initially hide user info */
+    }
+  </style>
+</head>
+<body>
+
+  <h1 style="text-align: center;"> Social account log in Assignment </h1>
+
+  <!--------------------------------Google Sign-In --------------------------------------------->
+
+  <!-- Add JWT decoding library for google token-->
+  <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
+
+  <!-- Assign google log in and log out buttons -->
+  <div id="g_id_onload"
+       data-client_id="637317258625-qaplan4m3mjuevmg2q5sf0iai73tkf3g.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse">
+  </div>
+
+  <button id="google-login-button">Login with Google</button>
+  <button id="google-logout-button" onclick="GoogleLogout()">Logout Google account</button>
+
+  <!-- User Information -->
+  <div id="user-info">
+    <p><strong>User ID:</strong> <span id="user-id"></span></p>
+    <p><strong>Email:</strong> <span id="user-email"></span></p>
+    <p><strong>Name:</strong> <span id="user-name"></span></p>
+  </div>
+
+  <script>
+    let googleUser = null;
+
+    // Initialize Google Sign-In
+    function initialize() {
+      google.accounts.id.initialize({
+        client_id: '637317258625-qaplan4m3mjuevmg2q5sf0iai73tkf3g.apps.googleusercontent.com',
+        callback: handleCredentialResponse
+      });
+
+      google.accounts.id.renderButton(
+        document.getElementById("google-login-button"),
+        { theme: "outline", size: "large"}
+      );
+    }
+
+    // Handle the login response and display user data
+    function handleCredentialResponse(response) {
+      const userCredential = jwt_decode(response.credential);
+      googleUser = userCredential; // Store user info
+
+      // Display Google user info
+      displayGoogleUserInfo();
+    }
+
+    // Display Google user information, store user info to Local Storage, and show logout button
+    function displayGoogleUserInfo() {
+      document.getElementById('user-id').innerText = googleUser.sub;
+      document.getElementById('user-email').innerText = googleUser.email;
+      document.getElementById('user-name').innerText = googleUser.name;
+      console.log("User signed in Google account successfully.");
+
+      // Show user info and logout button
+      document.getElementById('user-info').style.display = 'block';
+      document.getElementById('google-login-button').style.display = 'none';
+      document.getElementById('google-logout-button').style.display = 'block';
+      document.getElementById('facebook-login-button').style.display = 'none'; // hide facebook log in button
+      
+
+      //store user information to local storage
+      const localStorageContent = localStorage.getItem('UserInfo');
+      let UserInfo;
+      if(localStorageContent === null){
+          UserInfo = [];
+      } else {
+        UserInfo = JSON.parse(localStorageContent);
+      }
+      UserInfo.push(googleUser.sub + "," + googleUser.email + "," + googleUser.name);
+      localStorage.setItem('UserInfo', JSON. stringify(UserInfo));
+    }
+
+    // Google logout function
+    function GoogleLogout() {
+      google.accounts.id.disableAutoSelect(); // Disable the automatic sign-in
+      google.accounts.id.revoke(googleUser.credential, function() {
+        console.log("User signed out Google account.");
+        // Reset UI
+        document.getElementById('user-info').style.display = 'none';
+        document.getElementById('google-login-button').style.display = 'block';
+        document.getElementById('google-logout-button').style.display = 'none';
+        document.getElementById('facebook-login-button').style.display = 'block';
+      });
+    }
+    
+
+    // Initialize Google Sign-In on page load
+    window.onload = initialize;
+
+    // Load Google Sign-In prompt
+    google.accounts.id.prompt();
+
+  </script>
+
+
+   <!------------------------------------ Facebook Log in --------------------------------------------------->
+
+   <!-- Assign Facebook Login and Log out Button -->
+  <button id="facebook-login-button" onclick="facebookLogin()">Login with Facebook</button>
+  <button id="facebook-logout-button" onclick="facebookLogout()">Facebook Logout</button>
+
+  <script>
+    // Initialize the Facebook SDK
+    window.fbAsyncInit = function() {
+      FB.init({
+        appId      : '1240742596987764', 
+        cookie     : true,
+        xfbml      : true,
+        version    : 'v12.0' 
+      });
+
+      // Check the login status when the page loads
+      FB.getLoginStatus(function(response) {
+        if (response.status === 'connected') {
+          fetchFacebookUserInfo();
+        }
+      });
+    };
+
+    // Load the Facebook SDK asynchronously
+    (function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "https://connect.facebook.net/en_US/sdk.js";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+
+    // Facebook Login function
+    function facebookLogin() {
+      FB.login(function(response) {
+        if (response.authResponse) {
+          // User successfully logged in, get their access token
+          console.log('Logged in Facebook successfully');
+          fetchFacebookUserInfo();
+        } else {
+          console.log('User cancelled login or did not fully authorize.');
+        }
+      }, {scope: 'email,public_profile'});
+    }
+
+    // Fetch Facebook user info using the OAuth token, display user info, and store info to Local Storage
+    function fetchFacebookUserInfo() {
+      FB.api('/me', {fields: 'id,name,email'}, function(response) {
+        // Display user info
+        document.getElementById('user-id').innerText = response.id;
+        document.getElementById('user-name').innerText = response.name;
+        document.getElementById('user-email').innerText = response.email;
+
+        // Show user info and hide login button
+        document.getElementById('user-info').style.display = 'block';
+        document.getElementById('facebook-login-button').style.display = 'none';
+        document.getElementById('facebook-logout-button').style.display = 'block';
+        document.getElementById('google-login-button').style.display = 'none'; // hide google log in button
+       
+        //store user information to local storage
+      const localStorageContent = localStorage.getItem('UserInfo');
+      let UserInfo;
+      if(localStorageContent === null){
+          UserInfo = [];
+      } else {
+        UserInfo = JSON.parse(localStorageContent);
+      }
+      UserInfo.push(response.id + "," + response.email + "," + response.name);
+      localStorage.setItem('UserInfo', JSON. stringify(UserInfo));
+      });
+    }
+
+    // Facebook Logout function
+    function facebookLogout() {
+      FB.logout(function(response) {
+        // Reset UI after logout
+        document.getElementById('user-info').style.display = 'none';
+        document.getElementById('facebook-login-button').style.display = 'block';
+        document.getElementById('facebook-logout-button').style.display = 'none';
+        document.getElementById('google-login-button').style.display = 'block';
+        console.log('User logged out Facebook account.');
+      });
+    }
+  </script>
+
+
+</body>
+</html>
